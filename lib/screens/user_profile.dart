@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:hostel_reservation/app_theme.dart';
 import 'package:hostel_reservation/widgets/app_footer.dart';
 
@@ -370,6 +371,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 10),
+
+          //modified user profile to show review, my own code
+          _MenuTile(
+            icon: Icons.rate_review_rounded,
+            label: 'My Reviews',
+            color: AppTheme.primaryColor,
+            onTap: () => context.push('/reviews'),
+          ),
+          const SizedBox(height: 8),
           _MenuTile(
             icon: Icons.feedback_rounded,
             label: 'Complain / Feedback',
@@ -705,6 +715,64 @@ class _UserDetailsTabState extends State<_UserDetailsTab> {
               Icons.location_on_rounded,
               'Location',
               widget.userData?['location'] ?? 'Not set',
+            ),
+            // show the user's own review if it exists, edits by kamsi
+            StreamBuilder<DocumentSnapshot>(
+              stream: widget.userId != null
+                  ? widget.firestore.collection('reviews').doc(widget.userId).snapshots()
+                  : const Stream.empty(),
+              builder: (context, snap) {
+                if (!snap.hasData) return const SizedBox.shrink();
+                final data = snap.data!.data() as Map<String, dynamic>?;
+                if (data == null) return const SizedBox.shrink();
+                final rating = (data['rating'] as num?)?.toDouble() ?? 0;
+                final comment = data['comment'] as String? ?? '';
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your Review',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _kGreyText,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          RatingBarIndicator(
+                            rating: rating,
+                            itemBuilder: (context, _) => const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            rating > 0 ? rating.toStringAsFixed(1) : 'Not rated',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => context.push('/reviews'),
+                            child: const Text('Edit'),
+                          ),
+                        ],
+                      ),
+                      if (comment.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          comment,
+                          style: const TextStyle(fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ],
